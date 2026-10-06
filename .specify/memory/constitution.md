@@ -74,6 +74,30 @@ MUST stop implementation at the contract boundary rather than be silently invent
 - Keep changes limited to the current feature and named task scope; avoid unrelated
   refactors.
 
+## Session 005 Technical and Security Constraints
+
+This amendment authorizes the bounded Week 05 Recovery Planner assignment without
+broadening the project into a general autonomous agent.
+
+- Session 005 may add one bounded Recovery Planner workflow and one deterministic,
+  read-only `evaluate_recovery_plan` tool. The workflow MUST NOT change canonical
+  game state or execute the returned plan automatically.
+- The backend MUST own run state, tool allowlisting, argument and result validation,
+  budgets, stop decisions, retries, cancellation, and safe public errors. The model
+  may propose a step but MUST NOT be treated as an execution authority.
+- Every run MUST have explicit model-step, tool-call, provider-attempt, per-call
+  timeout, and total-deadline limits. Repeated actions MUST be detected and stopped.
+- Final output MUST use a strict runtime-validated contract and reference only
+  evidence returned by the validated evaluator result.
+- Core verification MUST be fake-first and cover success, rejected tools, invalid
+  arguments, provider or tool failure, repeated actions, and exhausted step, call,
+  or deadline limits. Live-provider checks remain limited and supplementary.
+- Gemini MUST remain behind the existing server-side provider boundary. Provider
+  credentials and raw provider responses MUST NOT reach the browser or evidence.
+- Arbitrary tools, filesystem or shell access, external URLs, write actions,
+  automatic gameplay, persistence, provider fallback, and general autonomous agents
+  remain out of scope.
+
 ## Development Workflow
 
 The project follows this Spec Kit sequence for each feature:
@@ -109,4 +133,10 @@ depend on a separate tutor-provided fixture; this project defines that tool's
 bounded contract. Any other conflict with the course challenge brief MUST be
 surfaced for human resolution rather than silently overridden.
 
-**Version**: 2.1.0 | **Ratified**: 2026-09-22 | **Last Amended**: 2026-09-30
+Version 2.2.0 authorizes Session 005 as the separately specified bounded Recovery
+Planner feature. It permits one deterministic read-only evaluator inside an
+application-controlled agent run while retaining the existing provider, validation,
+security, review, and evidence boundaries. Goran Suvačarev and Sara Trnjakov
+reviewed and approved this amendment for the Week 05 assignment.
+
+**Version**: 2.2.0 | **Ratified**: 2026-09-22 | **Last Amended**: 2026-10-06
