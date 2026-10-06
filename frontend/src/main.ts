@@ -4,6 +4,7 @@ import { createKeyboardControls } from "./input/controls";
 import { createGameSession } from "./presentation/gameSession";
 import { createPresentationState, transitionPresentation, type PresentationAction } from "./presentation/session";
 import { canDisplayHint, COACH_UNAVAILABLE_MESSAGE, hintMessageFromResult } from "./coach/hintFeedback";
+import { canDisplayRecovery, recoveryMessageFromResult } from "./coach/recoveryFeedback";
 import { createGameAssets } from "./rendering/assets";
 import { renderGame } from "./rendering/renderGame";
 
@@ -37,6 +38,14 @@ const phaseElement = requireElement<HTMLElement>("#phase-label");
 const coachControl = requireElement<HTMLElement>("#coach-control");
 const hintButton = requireElement<HTMLButtonElement>("#hint-button");
 const hintMessage = requireElement<HTMLElement>("#hint-message");
+const recoveryButton = requireElement<HTMLButtonElement>("#recovery-button");
+const recoveryMessage = requireElement<HTMLElement>("#recovery-message");
+const recoveryResult = requireElement<HTMLElement>("#recovery-result");
+const recoverySummary = requireElement<HTMLElement>("#recovery-summary");
+const recoveryConfidence = requireElement<HTMLElement>("#recovery-confidence");
+const recoveryActions = requireElement<HTMLOListElement>("#recovery-actions");
+const recoveryEvidence = requireElement<HTMLUListElement>("#recovery-evidence");
+const recoveryGoalInputs = document.querySelectorAll<HTMLInputElement>('input[name="recovery-goal"]');
 const difficultyInputs = document.querySelectorAll<HTMLInputElement>('input[name="difficulty"]');
 
 const controls = createKeyboardControls();
@@ -46,6 +55,7 @@ let state = createInitialGameState();
 let previousTime: number | undefined;
 let displayedDamage = state.lastDamage;
 let hintRequest: AbortController | null = null;
+let recoveryRequest: AbortController | null = null;
 
 const createSession = () => createGameSession(presentation.difficulty);
 const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
@@ -53,6 +63,25 @@ const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${Math.floo
 const stopHintRequest = () => {
   hintRequest?.abort();
   hintRequest = null;
+};
+const clearRecoveryResult = () => {
+  recoveryResult.hidden = true;
+  recoverySummary.textContent = "";
+  recoveryConfidence.textContent = "";
+  recoveryActions.replaceChildren();
+  recoveryEvidence.replaceChildren();
+};
+const stopRecoveryRequest = () => { recoveryRequest?.abort(); recoveryRequest = null; };
+const stopCoachRequests = () => { stopHintRequest(); stopRecoveryRequest(); };
+const selectedRecoveryGoal = () => Array.from(recoveryGoalInputs).find((input) => input.checked)?.value === "advance" ? "advance" : "survive";
+const renderRecovery = (plan: ReturnType<typeof recoveryMessageFromResult>) => {
+  recoveryMessage.textContent = plan.message;
+  if (plan.kind !== "completed") { clearRecoveryResult(); return; }
+  recoveryResult.hidden = false;
+  recoverySummary.textContent = plan.result.summary;
+  recoveryConfidence.textContent = `Confidence: ${plan.result.confidence}`;
+  recoveryActions.replaceChildren(...plan.result.actions.map((action) => { const item = document.createElement("li"); item.textContent = action.replaceAll("_", " "); return item; }));
+  recoveryEvidence.replaceChildren(...plan.result.evidence.map((fact) => { const item = document.createElement("li"); item.textContent = fact.fact; return item; }));
 };
 
 const updateHud = () => {
@@ -65,10 +94,17 @@ const updateHud = () => {
 
   if (state.lastDamage !== displayedDamage) {
     displayedDamage = state.lastDamage;
-    stopHintRequest();
+    stopCoachRequests();
+    clearRecoveryResult();
   }
-  if (!state.lastDamage) hintMessage.textContent = "Available after losing a life.";
+  if (!state.lastDamage) {
+    hintMessage.textContent = "Available after losing a life.";
+    recoveryMessage.textContent = "Available after losing a life.";
+    clearRecoveryResult();
+  }
   hintButton.disabled = presentation.view !== "playing" || !state.lastDamage || hintRequest !== null;
+  recoveryButton.disabled = presentation.view !== "playing" || !state.lastDamage || recoveryRequest !== null;
+  for (const input of recoveryGoalInputs) input.disabled = presentation.view !== "playing" || !state.lastDamage || recoveryRequest !== null;
 };
 
 const updatePanels = () => {
@@ -102,9 +138,11 @@ const applyAction = (action: PresentationAction) => {
     previousTime = undefined;
   }
   if (startsFreshSession || endsSession) {
-    stopHintRequest();
+    stopCoachRequests();
     displayedDamage = state.lastDamage;
     hintMessage.textContent = "Available after losing a life.";
+    recoveryMessage.textContent = "Available after losing a life.";
+    clearRecoveryResult();
   }
   updatePanels();
   updateHud();
@@ -134,6 +172,28 @@ hintButton.addEventListener("click", async () => {
     }
   } finally {
     if (hintRequest === controller) { hintRequest = null; updateHud(); }
+  }
+});
+
+recoveryButton.addEventListener("click", async () => {
+  const damage = state.lastDamage;
+  if (!damage || recoveryRequest || presentation.view !== "playing") return;
+  const controller = new AbortController();
+  recoveryRequest = controller;
+  clearRecoveryResult();
+  recoveryMessage.textContent = "Planning a safe recovery…";
+  updateHud();
+  try {
+    const response = await fetch("/api/recovery-plan", {
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
+      body: JSON.stringify({ goal: selectedRecoveryGoal(), context: { difficulty: state.config.difficulty, lives: state.lives, lastDamage: damage } }),
+    });
+    const result: unknown = await response.json();
+    if (canDisplayRecovery(controller, recoveryRequest, damage, state.lastDamage, presentation.view)) renderRecovery(recoveryMessageFromResult(result, response.ok));
+  } catch {
+    if (canDisplayRecovery(controller, recoveryRequest, damage, state.lastDamage, presentation.view)) renderRecovery(recoveryMessageFromResult(null, false));
+  } finally {
+    if (recoveryRequest === controller) { recoveryRequest = null; updateHud(); }
   }
 });
 

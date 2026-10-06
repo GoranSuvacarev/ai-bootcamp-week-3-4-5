@@ -14,6 +14,10 @@ redesigned game experience, and one controlled Google Gemini hint feature.
 - A separate Node backend that keeps Gemini credentials outside the browser.
 - One model-callable read-only tool, `get_game_state`, with an exact allowlist,
   runtime validation, bounded retries, cancellation, and safe public errors.
+- A separate post-damage Recovery Planner. The player chooses `survive` or
+  `advance`; the server may evaluate one candidate and one distinct revision
+  through the read-only `evaluate_recovery_plan` tool, then returns only a
+  grounded advisory plan. It never controls gameplay or executes actions.
 - Shared runtime contracts for the hint request, tool proposal, game-state
   snapshot, and structured `HintResponse`.
 - Local fake-based success, negative, and failure tests. Automated tests do not
@@ -29,6 +33,7 @@ redesigned game experience, and one controlled Google Gemini hint feature.
 | `specs/002-client-server-separation/` | Client/server separation specification |
 | `specs/003-game-experience-redesign/` | Game redesign specification and evidence |
 | `specs/004-gemini-coach-tool/` | Gemini tool contract, implementation plan, tests, and evidence |
+| `specs/005-bounded-recovery-planner/` | Recovery Planner specification, contracts, and implementation notes |
 | `docs/` | Session 003 baseline, evaluations, handoff, and AI usage log |
 
 Asset licensing and source-pack information are recorded in
@@ -78,9 +83,10 @@ npm.cmd run build
 npm.cmd audit --omit=dev --workspace @quattro-kong/backend
 ```
 
-The final recorded result is 78 passing tests: 57 frontend, 17 backend, and 4
-shared-contract tests. Typecheck and production build pass, and the backend
-production dependency audit reports zero vulnerabilities.
+The Recovery Planner implementation currently has 85 passing automated tests:
+59 frontend, 20 backend, and 6 shared-contract tests. Typecheck and production
+build pass. The optional live Gemini check is intentionally not required for
+the fake-based test suite.
 
 ## Evidence
 
@@ -90,6 +96,8 @@ production dependency audit reports zero vulnerabilities.
   `specs/004-gemini-coach-tool/contracts/tool-contract.md`
 - Session 004 success, negative, failure, browser, and live-provider evidence:
   `specs/004-gemini-coach-tool/evidence.md`
+- Session 005 deterministic Recovery Planner evidence:
+  `specs/005-bounded-recovery-planner/evidence.md`
 - AI usage record: `docs/AI_USAGE_LOG.md`
 
 The authoritative project rules are in `.specify/memory/constitution.md`.

@@ -3,9 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "exports": "./src/hint.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./hint": "./src/hint.mjs",
+    "./recovery": "./src/recovery.mjs"
+  },
   "scripts": {
-    "typecheck": "node --check src/hint.mjs",
-    "test": "node --test tests/hint.test.mjs"
+    "typecheck": "node --check src/hint.mjs && node --check src/recovery.mjs && node --check src/index.mjs",
+    "test": "node --test tests/*.test.mjs"
   }
 }

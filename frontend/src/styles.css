@@ -119,6 +119,13 @@ canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; 
 .side-card .button { width: 100%; }
 .phase-label { margin: 0; color: #7de0cc; font-size: .73rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .hint-message { min-height: 3em; overflow-wrap: anywhere; }
+.recovery-planner { margin-top: 18px; border-top: 1px solid #405574; padding-top: 14px; }
+.recovery-goals { display: flex; gap: 13px; margin: 0 0 10px; padding: 0; border: 0; color: #bbcae0; font-size: .8rem; }
+.recovery-goals legend { margin-bottom: 7px; color: #9eb2d2; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.recovery-goals label { cursor: pointer; }
+.recovery-result { margin-top: 8px; border-left: 3px solid #7de0cc; padding-left: 10px; }
+.recovery-result p { margin: 5px 0; }
+.recovery-result ol, .recovery-result ul { margin: 6px 0; padding-left: 19px; color: #cbd8ec; font-size: .8rem; line-height: 1.45; }
 kbd { border: 1px solid #657a9e; border-bottom-width: 3px; border-radius: 4px; padding: 1px 5px; color: #f8f4e8; font-family: inherit; font-size: .75rem; }
 .asset-credit { margin: 0; color: #7990b7; font-size: .69rem; line-height: 1.35; }
 @media (max-width: 900px) { .game-layout { grid-template-columns: 1fr; } .sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hud-grid, .asset-credit { grid-column: 1 / -1; } }

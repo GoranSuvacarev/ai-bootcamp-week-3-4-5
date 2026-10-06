@@ -85,6 +85,20 @@
             <h2 id="coach-title">AI coach</h2>
             <button id="hint-button" class="button" type="button" disabled>Get a recovery hint</button>
             <p id="hint-message" class="hint-message" role="status">Available after losing a life.</p>
+            <div class="recovery-planner" aria-labelledby="recovery-title">
+              <h3 id="recovery-title">Recovery planner</h3>
+              <fieldset id="recovery-goals" class="recovery-goals">
+                <legend>Next attempt priority</legend>
+                <label><input type="radio" name="recovery-goal" value="survive" checked /> Survive</label>
+                <label><input type="radio" name="recovery-goal" value="advance" /> Advance</label>
+              </fieldset>
+              <button id="recovery-button" class="button" type="button" disabled>Get recovery plan</button>
+              <p id="recovery-message" class="hint-message" role="status">Available after losing a life.</p>
+              <section id="recovery-result" class="recovery-result" aria-live="polite" hidden>
+                <p id="recovery-summary"></p><p id="recovery-confidence"></p>
+                <ol id="recovery-actions"></ol><ul id="recovery-evidence"></ul>
+              </section>
+            </div>
           </section>
           <p class="asset-credit">Tile art: Modern Exteriors and Modern UI by LimeZu. See <code>public/assets/ATTRIBUTION.md</code>.</p>
         </aside>

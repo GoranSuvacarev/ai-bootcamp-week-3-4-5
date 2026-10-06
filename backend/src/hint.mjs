@@ -1,9 +1,13 @@
 import { createServer } from "node:http";
-import { API_ERROR_CODES, publicError, validateHintRequest } from "@quattro-kong/game-contracts";
+import { API_ERROR_CODES, publicError, validateHintRequest, validateRecoveryRequest } from "@quattro-kong/game-contracts";
 import { createGeminiAdapter } from "./coach/gemini-adapter.mjs";
 import { createGameStateTool } from "./coach/game-state-tool.mjs";
 import { createHintFlow } from "./coach/hint-flow.mjs";
 import { createEventStore } from "./coach/telemetry.mjs";
+import { createRecoveryGeminiAdapter } from "./recovery/gemini-adapter.mjs";
+import { createRecoveryFlow } from "./recovery/recovery-flow.mjs";
+import { createRecoveryToolRegistry } from "./recovery/tool-registry.mjs";
+import { createRecoveryEventStore } from "./recovery/telemetry.mjs";
 
 const MAX_BODY_BYTES = 2048;
 
@@ -38,6 +42,9 @@ export function createHintServer({
   coach,
   tool = createGameStateTool(),
   eventSink,
+  recoveryModel,
+  recoveryRegistry = createRecoveryToolRegistry(),
+  recoveryEventSink,
 } = {}) {
   const eventStore = createEventStore();
   const recordEvent = (event) => {
@@ -46,9 +53,14 @@ export function createHintServer({
   };
   const resolvedCoach = apiKey ? (coach ?? createGeminiAdapter({ apiKey, model })) : null;
   const flow = resolvedCoach ? createHintFlow({ model: resolvedCoach, tool, eventSink: recordEvent }) : null;
+  const recoveryEventStore = createRecoveryEventStore();
+  const recordRecoveryEvent = (event) => { recoveryEventStore.record(event); recoveryEventSink?.(event); };
+  const resolvedRecoveryModel = recoveryModel ?? (apiKey ? createRecoveryGeminiAdapter({ apiKey, model }) : null);
+  const recoveryFlow = resolvedRecoveryModel ? createRecoveryFlow({ model: resolvedRecoveryModel, registry: recoveryRegistry, eventSink: recordRecoveryEvent, provider: recoveryModel ? "fake" : "gemini", modelName: model }) : null;
 
   const server = createServer(async (request, response) => {
-    if (request.url !== "/api/hint") {
+    const recovery = request.url === "/api/recovery-plan";
+    if (request.url !== "/api/hint" && !recovery) {
       sendJson(response, 404, publicError(API_ERROR_CODES.NOT_FOUND, "Not found."));
       return;
     }
@@ -66,12 +78,20 @@ export function createHintServer({
     try {
       raw = await readBody(request);
     } catch (error) {
-      sendJson(response, error.message === "too-large" ? 413 : 400, publicError(API_ERROR_CODES.INVALID_REQUEST, "Invalid request."));
+      if (recovery) sendJson(response, 400, { status: "failed", stopReason: "invalid_input", message: "Invalid recovery plan request." });
+      else sendJson(response, error.message === "too-large" ? 413 : 400, publicError(API_ERROR_CODES.INVALID_REQUEST, "Invalid request."));
       return;
     }
-    const context = validateHintRequest(raw);
+    const context = recovery ? validateRecoveryRequest(raw) : validateHintRequest(raw);
     if (!context) {
-      sendJson(response, 400, publicError(API_ERROR_CODES.INVALID_REQUEST, "Invalid game state."));
+      if (recovery) sendJson(response, 400, { status: "failed", stopReason: "invalid_input", message: "Invalid recovery plan request." });
+      else sendJson(response, 400, publicError(API_ERROR_CODES.INVALID_REQUEST, "Invalid game state."));
+      return;
+    }
+    if (recovery) {
+      if (!recoveryFlow) { sendJson(response, 503, { status: "failed", stopReason: "provider_failed", message: "Recovery planning is unavailable right now." }); return; }
+      const result = await recoveryFlow.run(context, { signal: createRequestSignal(request, response) });
+      sendJson(response, result.status, result.body);
       return;
     }
     if (!flow) {
@@ -83,5 +103,6 @@ export function createHintServer({
     sendJson(response, result.status, result.body);
   });
   server.getCoachEvents = () => eventStore.recent();
+  server.getRecoveryEvents = () => recoveryEventStore.recent();
   return server;
 }
