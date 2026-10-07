@@ -73,6 +73,10 @@ confirmed Hint independence, focusable controls, pause cancellation with stale
 result suppression, restart, return to menu, and no browser-console errors. No
 rendered plan moved the player or changed canonical game state.
 
+The final pair confirmation records the complete pre-existing win/loss gameplay
+routes and the seven-minute delivery demo as rehearsed. Both partners confirmed
+that they can explain the bounded flow and the rejected-tool zero-execution proof.
+
 Sara implemented contracts, evaluator, registry, flow, adapter, endpoint, UI,
 tests, and evidence updates. Goran performed the security, repository, automated,
 live-provider, and browser handoff review. Baseline implementation commit:

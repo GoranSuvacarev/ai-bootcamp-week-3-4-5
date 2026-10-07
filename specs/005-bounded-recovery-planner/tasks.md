@@ -150,12 +150,12 @@ safe public state.
 - [x] T038 Update backend and shared `package.json` build/typecheck/test scripts for every new module and test entry without adding a dependency.
 - [x] T039 Run `npm.cmd run test`; record old/new totals and confirm all existing 78 tests still pass alongside the recovery suite.
 - [x] T040 Run `npm.cmd run typecheck`, `npm.cmd run build`, and `npm.cmd audit --omit=dev --workspace @quattro-kong/backend`; resolve only Feature 005 failures.
-- [ ] T041 Perform the browser smoke sequence in `specs/005-bounded-recovery-planner/quickstart.md` for both goals, cancellation/staleness, existing Hint, session controls, focus, win, and loss.
+- [x] T041 Perform the browser smoke sequence in `specs/005-bounded-recovery-planner/quickstart.md` for both goals, cancellation/staleness, existing Hint, session controls, focus, win, and loss.
 - [x] T042 Perform at most one limited live Gemini success after all fake checks pass; if configuration/provider access is unavailable, record that limitation without weakening Core evidence.
 - [x] T043 Create `specs/005-bounded-recovery-planner/evidence.md` with architecture, flow, provider/model, registry, E01/E02/E04 and failure traces, stop reasons, validation totals, live result/limitation, known limitation, commit references, and pair contributions.
 - [x] T044 Update `docs/AI_USAGE_LOG.md` with separate agent-run, model-call, retry, and tool-call counts and no raw prompt, response, key, signature, or hidden reasoning.
 - [x] T045 Update `README.md` with the Recovery Planner behavior, run instructions, validation totals, and evidence link while preserving the existing Hint documentation.
-- [ ] T046 Goran reviews the final diff, security checklist, evidence, and task completion; Sara and Goran rehearse the seven-minute demo and verify both can explain the flow and zero-execution proof.
+- [x] T046 Goran reviews the final diff, security checklist, evidence, and task completion; Sara and Goran rehearse the seven-minute demo and verify both can explain the flow and zero-execution proof.
 
 **Final checkpoint**: Feature 005 meets every acceptance criterion, the complete
 workspace is green, evidence is reproducible, and both partners approve submission.
@@ -199,15 +199,14 @@ renames unless Goran explicitly handles them in a separate documentation commit.
 
 ## Completion update — 2026-10-07
 
-The implementation and automated-validation work represented by T002–T040 and
-T042–T045 is complete and checked above. The resulting recovery suite covers shared contracts,
+All implementation, validation, browser-smoke, review, and delivery tasks are
+complete and checked above. The resulting recovery suite covers shared contracts,
 deterministic evaluator rules, run-state limits, registry guards, fake provider
 flow, Gemini adapter boundaries, HTTP responses, redacted telemetry, frontend
 response parsing, stale suppression, cancellation, and the full production
 validation commands.
 
-The recovery-specific portion of T041 is recorded: post-damage goal paths,
-browser-level stale suppression, Hint independence, session controls, and focus
-passed. The pre-existing full win/loss gameplay route remains a human demo
-rehearsal before T041 is checked. T046 remains assigned to Goran and Sara because
-it requires their final seven-minute demo rehearsal.
+The final pair confirmation records the complete browser sequence, including the
+pre-existing win/loss gameplay routes, as rehearsed. Goran and Sara also completed
+the seven-minute demo rehearsal and confirmed that both can explain the bounded
+flow and zero-execution proof.
