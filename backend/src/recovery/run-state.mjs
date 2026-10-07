@@ -20,17 +20,17 @@ export function createRecoveryRun({ goal, context, now = Date.now, runId = `run-
 export function isTerminal(run) { return terminal.has(run.status); }
 export function startRun(run) { if (run.status !== "created") return false; run.status = "running"; return true; }
 export function canStartWork(run, now = Date.now) { return run.status === "running" && now() < run.deadlineAtMs; }
-export function beginStep(run) {
-  if (isTerminal(run) || run.stepCount >= RECOVERY_LIMITS.maxSteps) return false;
+export function beginStep(run, limits = RECOVERY_LIMITS) {
+  if (isTerminal(run) || run.stepCount >= limits.maxSteps) return false;
   run.stepCount += 1; run.attemptsInCurrentStep = 0; return true;
 }
-export function beginProviderAttempt(run) {
-  if (isTerminal(run) || run.providerAttemptCount >= RECOVERY_LIMITS.maxProviderAttempts || run.attemptsInCurrentStep >= RECOVERY_LIMITS.maxAttemptsPerStep) return false;
+export function beginProviderAttempt(run, limits = RECOVERY_LIMITS) {
+  if (isTerminal(run) || run.providerAttemptCount >= limits.maxProviderAttempts || run.attemptsInCurrentStep >= limits.maxAttemptsPerStep) return false;
   run.providerAttemptCount += 1; run.attemptsInCurrentStep += 1; return true;
 }
-export function beginToolCall(run, key) {
-  if (isTerminal(run) || run.toolCallCount >= RECOVERY_LIMITS.maxToolCalls || run.actionKeys.includes(key)) return false;
+export function beginToolCall(run, key, limits = RECOVERY_LIMITS) {
+  if (isTerminal(run) || run.toolCallCount >= limits.maxToolCalls || run.actionKeys.includes(key)) return false;
   run.actionKeys.push(key); run.toolCallCount += 1; return true;
 }
-export function addEvaluation(run, evaluation) { if (isTerminal(run) || run.evaluations.length >= RECOVERY_LIMITS.maxToolCalls) return false; run.evaluations.push(evaluation); return true; }
+export function addEvaluation(run, evaluation, limits = RECOVERY_LIMITS) { if (isTerminal(run) || run.evaluations.length >= limits.maxToolCalls) return false; run.evaluations.push(evaluation); return true; }
 export function finishRun(run, status, stopReason) { if (isTerminal(run)) return false; run.status = status; run.stopReason = stopReason; return true; }

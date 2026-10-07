@@ -51,8 +51,9 @@ function publicResponse(run) {
   return { status, body: { runId: run.runId, status: run.status, stopReason, message } };
 }
 
-export function createRecoveryFlow({ model, registry = createRecoveryToolRegistry(), eventSink = () => {}, provider = "gemini", modelName = "", now = Date.now, limits = RECOVERY_LIMITS } = {}) {
+export function createRecoveryFlow({ model, registry = createRecoveryToolRegistry(), eventSink = () => {}, provider = "gemini", modelName = "", now = Date.now, limits: suppliedLimits = {} } = {}) {
   if (!model?.step) throw new Error("Recovery model must implement step().");
+  const limits = Object.freeze({ ...RECOVERY_LIMITS, ...suppliedLimits });
   return Object.freeze({
     async run(rawRequest, { signal: parentSignal } = {}) {
       const request = validateRecoveryRequest(rawRequest);
@@ -67,7 +68,7 @@ export function createRecoveryFlow({ model, registry = createRecoveryToolRegistr
         let lastError;
         while (true) {
           if (deadline.signal.aborted) throw deadline.signal.reason;
-          if (!beginProviderAttempt(run)) return { limit: "provider_attempt_limit" };
+          if (!beginProviderAttempt(run, limits)) return { limit: "provider_attempt_limit" };
           const attempt = linkedSignal(deadline.signal, limits.providerAttemptMs);
           try {
             return { decision: await awaitAbortable(model.step({ runId: run.runId, goal: run.goal, context: run.context, history: history.map((entry) => ({ proposal: { actions: [...entry.proposal.actions] }, evaluation: entry.evaluation })), availableTools: [{ name: "evaluate_recovery_plan" }], signal: attempt.signal }), attempt.signal) };
@@ -85,7 +86,7 @@ export function createRecoveryFlow({ model, registry = createRecoveryToolRegistr
       try {
         while (run.status === "running") {
           if (deadline.signal.aborted) return finish("failed", abortedReason(deadline.signal));
-          if (!beginStep(run)) return finish("stopped", "step_limit");
+          if (!beginStep(run, limits)) return finish("stopped", "step_limit");
           let answer;
           try { answer = await callModel(history); }
           catch (error) {
@@ -105,15 +106,15 @@ export function createRecoveryFlow({ model, registry = createRecoveryToolRegistr
             run.result = result;
             return finish("completed", "completed");
           }
-          if (run.stepCount === 3) return finish("stopped", "step_limit");
+          if (run.stepCount >= limits.maxSteps) return finish("stopped", "step_limit");
           const checked = registry.validate(decision.name, decision.args);
           if (checked.error) { validations.push(checked.error); return finish("stopped", checked.error); }
           const actionKey = canonicalActionKey(decision.name, checked.args, run.context.stateVersion);
           if (run.actionKeys.includes(actionKey)) return finish("stopped", "repeated_action");
-          if (!beginToolCall(run, actionKey)) return finish("stopped", "tool_call_limit");
+          if (!beginToolCall(run, actionKey, limits)) return finish("stopped", "tool_call_limit");
           const tool = await registry.execute(run.context, checked.args);
           if (tool.error) { validations.push(tool.error); return finish("failed", tool.error); }
-          if (!addEvaluation(run, tool.evaluation)) return finish("stopped", "tool_call_limit");
+          if (!addEvaluation(run, tool.evaluation, limits)) return finish("stopped", "tool_call_limit");
           history.push({ proposal: checked.args, evaluation: tool.evaluation });
         }
       } finally {

@@ -4,7 +4,7 @@ import { createKeyboardControls } from "./input/controls";
 import { createGameSession } from "./presentation/gameSession";
 import { createPresentationState, transitionPresentation, type PresentationAction } from "./presentation/session";
 import { canDisplayHint, COACH_UNAVAILABLE_MESSAGE, hintMessageFromResult } from "./coach/hintFeedback";
-import { canDisplayRecovery, recoveryMessageFromResult } from "./coach/recoveryFeedback";
+import { canDisplayRecovery, recoveryMessageFromResult, recoveryStatusFromResult } from "./coach/recoveryFeedback";
 import { createGameAssets } from "./rendering/assets";
 import { renderGame } from "./rendering/renderGame";
 
@@ -39,6 +39,7 @@ const coachControl = requireElement<HTMLElement>("#coach-control");
 const hintButton = requireElement<HTMLButtonElement>("#hint-button");
 const hintMessage = requireElement<HTMLElement>("#hint-message");
 const recoveryButton = requireElement<HTMLButtonElement>("#recovery-button");
+const recoveryStatus = requireElement<HTMLElement>("#recovery-status");
 const recoveryMessage = requireElement<HTMLElement>("#recovery-message");
 const recoveryResult = requireElement<HTMLElement>("#recovery-result");
 const recoverySummary = requireElement<HTMLElement>("#recovery-summary");
@@ -74,7 +75,8 @@ const clearRecoveryResult = () => {
 const stopRecoveryRequest = () => { recoveryRequest?.abort(); recoveryRequest = null; };
 const stopCoachRequests = () => { stopHintRequest(); stopRecoveryRequest(); };
 const selectedRecoveryGoal = () => Array.from(recoveryGoalInputs).find((input) => input.checked)?.value === "advance" ? "advance" : "survive";
-const renderRecovery = (plan: ReturnType<typeof recoveryMessageFromResult>) => {
+const renderRecovery = (plan: ReturnType<typeof recoveryMessageFromResult>, status: "completed" | "stopped" | "failed") => {
+  recoveryStatus.textContent = `Recovery status: ${status}`;
   recoveryMessage.textContent = plan.message;
   if (plan.kind !== "completed") { clearRecoveryResult(); return; }
   recoveryResult.hidden = false;
@@ -100,6 +102,7 @@ const updateHud = () => {
   if (!state.lastDamage) {
     hintMessage.textContent = "Available after losing a life.";
     recoveryMessage.textContent = "Available after losing a life.";
+    recoveryStatus.textContent = "Recovery status: idle";
     clearRecoveryResult();
   }
   hintButton.disabled = presentation.view !== "playing" || !state.lastDamage || hintRequest !== null;
@@ -137,11 +140,12 @@ const applyAction = (action: PresentationAction) => {
     controls.reset();
     previousTime = undefined;
   }
-  if (startsFreshSession || endsSession) {
+  if (action.type === "pause" || startsFreshSession || endsSession) {
     stopCoachRequests();
     displayedDamage = state.lastDamage;
     hintMessage.textContent = "Available after losing a life.";
     recoveryMessage.textContent = "Available after losing a life.";
+    recoveryStatus.textContent = "Recovery status: idle";
     clearRecoveryResult();
   }
   updatePanels();
@@ -181,6 +185,7 @@ recoveryButton.addEventListener("click", async () => {
   const controller = new AbortController();
   recoveryRequest = controller;
   clearRecoveryResult();
+  recoveryStatus.textContent = "Recovery status: running";
   recoveryMessage.textContent = "Planning a safe recovery…";
   updateHud();
   try {
@@ -189,9 +194,9 @@ recoveryButton.addEventListener("click", async () => {
       body: JSON.stringify({ goal: selectedRecoveryGoal(), context: { difficulty: state.config.difficulty, lives: state.lives, lastDamage: damage } }),
     });
     const result: unknown = await response.json();
-    if (canDisplayRecovery(controller, recoveryRequest, damage, state.lastDamage, presentation.view)) renderRecovery(recoveryMessageFromResult(result, response.ok));
+    if (canDisplayRecovery(controller, recoveryRequest, damage, state.lastDamage, presentation.view)) renderRecovery(recoveryMessageFromResult(result, response.ok), recoveryStatusFromResult(result, response.ok));
   } catch {
-    if (canDisplayRecovery(controller, recoveryRequest, damage, state.lastDamage, presentation.view)) renderRecovery(recoveryMessageFromResult(null, false));
+    if (canDisplayRecovery(controller, recoveryRequest, damage, state.lastDamage, presentation.view)) renderRecovery(recoveryMessageFromResult(null, false), "failed");
   } finally {
     if (recoveryRequest === controller) { recoveryRequest = null; updateHud(); }
   }

@@ -169,3 +169,17 @@ then rerun successfully.
   production dependency vulnerabilities.
 - Browser smoke checks covered menu, gameplay, pause, resume, restart, return to
   menu, unavailable-provider behavior, and a successful live Gemini hint.
+
+## Session 005 — bounded Recovery Planner
+
+- Agent implementation runs: 2 (initial implementation and review corrections).
+- Fake-model calls during automated validation: 0 external provider calls; the
+  test doubles exercised retries, cancellation, limits, and malformed output.
+- Limited live-provider runs: 1. Model: `gemini-3.5-flash-lite`; result:
+  `completed`; model calls: 2; retry count: 0; evaluator tool calls: 1.
+- No API key, raw prompt, raw provider response, thought signature, coordinate,
+  or hidden reasoning is recorded. The live run returned a validated advisory
+  plan with the actions `wait`, `climb`.
+- Validation after review corrections: 112 tests passed (59 frontend, 47 backend,
+  6 shared); typecheck and production build passed. The production dependency
+  audit result recorded by the reviewer was zero vulnerabilities.

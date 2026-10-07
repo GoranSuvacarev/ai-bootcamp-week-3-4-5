@@ -196,3 +196,17 @@ Recommended logical commits:
 
 Stage exact Feature 005 files for each commit. Never include the pre-existing report
 renames unless Goran explicitly handles them in a separate documentation commit.
+
+## Completion update — 2026-10-07
+
+The implementation and automated-validation work represented by T002–T040 and
+T042–T045 is complete. The resulting recovery suite covers shared contracts,
+deterministic evaluator rules, run-state limits, registry guards, fake provider
+flow, Gemini adapter boundaries, HTTP responses, redacted telemetry, frontend
+response parsing, stale suppression, cancellation, and the full production
+validation commands.
+
+T041 remains a manual browser-smoke checklist item: both post-damage goal paths,
+browser-level stale rendering, win/loss, and focus still need to be recorded as
+one reproducible smoke run. T046 remains assigned to Goran because it requires
+an independent final review and demo rehearsal.

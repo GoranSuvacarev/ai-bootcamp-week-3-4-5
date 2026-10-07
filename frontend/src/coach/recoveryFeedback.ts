@@ -28,6 +28,12 @@ export function recoveryMessageFromResult(result: unknown, responseIsOk: boolean
   return { kind: "message" as const, message: RECOVERY_UNAVAILABLE_MESSAGE };
 }
 
+export function recoveryStatusFromResult(result: unknown, responseIsOk: boolean): "completed" | "stopped" | "failed" {
+  if (responseIsOk && parseCompletedRecovery(result)) return "completed";
+  if (record(result) && result.status === "stopped") return "stopped";
+  return "failed";
+}
+
 export function canDisplayRecovery(request: AbortController, activeRequest: AbortController | null, expectedDamage: unknown, currentDamage: unknown, view: string) {
   return request === activeRequest && expectedDamage === currentDamage && view === "playing" && !request.signal.aborted;
 }
