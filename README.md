@@ -83,8 +83,8 @@ npm.cmd run build
 npm.cmd audit --omit=dev --workspace @quattro-kong/backend
 ```
 
-The Recovery Planner implementation currently has 85 passing automated tests:
-59 frontend, 20 backend, and 6 shared-contract tests. Typecheck and production
+The Recovery Planner implementation currently has 121 passing automated tests:
+59 frontend, 55 backend, and 7 shared-contract tests. Typecheck and production
 build pass. The optional live Gemini check is intentionally not required for
 the fake-based test suite.
 

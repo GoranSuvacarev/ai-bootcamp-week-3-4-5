@@ -31,8 +31,11 @@ export function createRecoveryGeminiAdapter({ apiKey, model = "gemini-3.5-flash-
       const response = await abortable(client.models.generateContent({ model, contents, config: needsTool ? { tools: [{ functionDeclarations: [EVALUATE_RECOVERY_PLAN_DECLARATION] }], toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY, allowedFunctionNames: ["evaluate_recovery_plan"] } } } : { responseMimeType: "application/json", responseJsonSchema: RECOVERY_FINAL_SCHEMA } }), signal);
       const calls = response.functionCalls ?? [];
       const turn = response.candidates?.[0]?.content;
+      const hasTextPart = (response.candidates ?? []).some((candidate) =>
+        candidate.content?.parts?.some((part) => typeof part.text === "string" && part.text.trim()),
+      );
       if (response.candidates?.[0]?.finishReason === "SAFETY") return { kind: "refusal" };
-      if (calls.length && typeof response.text === "string" && response.text.trim()) return { kind: "invalid" };
+      if (calls.length && hasTextPart) return { kind: "invalid" };
       if (calls.length === 1 && needsTool) { turns.set(runId, [...contents, turn ?? { role: "model", parts: [{ functionCall: calls[0] }] }]); pendingCalls.set(runId, { id: calls[0].id ?? "call" }); return { kind: "tool_request", id: calls[0].id ?? "call", name: calls[0].name, args: calls[0].args ?? {} }; }
       if (calls.length || !response.text) return { kind: "invalid" };
       try { const result = JSON.parse(response.text); turns.set(runId, [...contents, turn ?? { role: "model", parts: [{ text: response.text }] }]); return { kind: "final", result }; } catch { return { kind: "invalid" }; }

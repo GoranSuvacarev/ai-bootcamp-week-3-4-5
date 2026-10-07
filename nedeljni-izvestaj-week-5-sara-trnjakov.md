@@ -8,7 +8,7 @@
 | Nedelja | Week 5 |
 | Par / tim | Goran |
 | Moj konkretan doprinos / uloga | Implementacija Feature 005 — Bounded Recovery Planner |
-| Reference na rad i dokaze | `specs/005-bounded-recovery-planner/evidence.md`; 85 prolaznih testova; typecheck i build prolaze |
+| Reference na rad i dokaze | `specs/005-bounded-recovery-planner/evidence.md`; 121 prolaznih testova; typecheck, build i produkcioni audit prolaze |
 
 ## 2. Moj status
 
@@ -32,12 +32,19 @@ Moj rad je obuhvatio:
 
 ## 4. Provere
 
-- `npm.cmd run test` — prolazi svih 85 testova.
+- `npm.cmd run test` — prolazi svih 121 test (59 frontend, 55 backend i 7 shared-contract testova).
 - `npm.cmd run typecheck` — prolazi.
 - `npm.cmd run build` — prolazi.
+- `npm.cmd audit --omit=dev --workspace @quattro-kong/backend` — nema produkcionih ranjivosti.
 
-Live Gemini poziv i ručni browser smoke test za Recovery Planner nisu pokretani; automatski testovi koriste fake model i ne zahtevaju API ključ.
+Ograničeni live Gemini poziv sa modelom `gemini-3.5-flash-lite` završen je
+statusom `completed`. Završna reviewerska provera vratila je validiran plan
+`avoid`, `climb` za cilj `survive`, sa četiri evidence činjenice i bez
+automatskog menjanja igre. Browser smoke je obuhvatio stvarni gubitak života,
+oba recovery cilja sa lokalnim fake odgovorima, eksplicitne statuse, postojeći
+Hint, otkazivanje i stale suppression pri pauzi, restart i povratak u meni.
 
 ## 5. Sledeći korak
 
-Sledeći korak je ručni browser smoke test za oba recovery cilja, proveru otkazivanja/stale odgovora i, po potrebi, jedan ograničeni live Gemini test sa konfigurisanom `GEMINI_API_KEY` vrednošću.
+Sledeći korak je ručna proba pune postojeće win/loss rute, zatim zajednička
+proba sedmominutnog demoa i finalna predaja.

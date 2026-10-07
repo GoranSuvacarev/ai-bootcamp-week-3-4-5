@@ -14,6 +14,9 @@ describe("recovery feedback", () => {
   it("suppresses stale recovery requests", () => {
     const controller = new AbortController();
     expect(canDisplayRecovery(controller, controller, "damage", "damage", "playing")).toBe(true);
+    expect(canDisplayRecovery(controller, new AbortController(), "damage", "damage", "playing")).toBe(false);
+    expect(canDisplayRecovery(controller, controller, "damage-1", "damage-2", "playing")).toBe(false);
+    expect(canDisplayRecovery(controller, controller, "damage", "damage", "paused")).toBe(false);
     controller.abort();
     expect(canDisplayRecovery(controller, controller, "damage", "damage", "playing")).toBe(false);
   });

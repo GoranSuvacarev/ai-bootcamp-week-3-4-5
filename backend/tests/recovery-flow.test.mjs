@@ -7,6 +7,16 @@ const request = { goal: "survive", context: { difficulty: "normal", lives: 2, la
 const final = { summary: "Wait for the hazard, then climb.", goal: "survive", actions: ["wait", "climb"], evidence: [{ id: "threat", fact: "Recent threat: rolling hazard." }], confidence: "high", completed: true };
 
 describe("bounded recovery planner", () => {
+  it("rejects invalid input before creating provider or tool work", async () => {
+    const model = { step: vi.fn(), dispose: vi.fn() };
+    const evaluator = vi.fn();
+    const result = await createRecoveryFlow({ model, registry: createRecoveryToolRegistry({ evaluator }) }).run({ ...request, extra: true });
+    expect(result).toEqual({ status: 400, body: { status: "failed", stopReason: "invalid_input", message: "Invalid recovery plan request." } });
+    expect(model.step).not.toHaveBeenCalled();
+    expect(model.dispose).not.toHaveBeenCalled();
+    expect(evaluator).not.toHaveBeenCalled();
+  });
+
   it("completes a grounded plan after exactly one evaluation", async () => {
     const model = { step: vi.fn().mockResolvedValueOnce({ kind: "tool_request", id: "one", name: "evaluate_recovery_plan", args: { actions: ["wait", "climb"] } }).mockResolvedValueOnce({ kind: "final", result: final }), dispose: vi.fn() };
     const result = await createRecoveryFlow({ model, provider: "fake" }).run(request);
@@ -73,11 +83,12 @@ describe("bounded recovery planner", () => {
 
   it("cancels a pending provider without starting another call", async () => {
     const controller = new AbortController();
-    const model = { step: vi.fn().mockImplementation(({ signal }) => new Promise((resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }))), dispose: vi.fn() };
+    const model = createFakeRecoveryModel([{ kind: "pending" }]);
     const pending = createRecoveryFlow({ model }).run(request, { signal: controller.signal });
     controller.abort({ kind: "cancelled" });
     await expect(pending).resolves.toMatchObject({ status: 499, body: { stopReason: "cancelled" } });
-    expect(model.step).toHaveBeenCalledOnce();
+    expect(model.requests).toHaveLength(1);
+    expect(model.abortReasons).toEqual([{ kind: "cancelled" }]);
   });
 
   it("records fake requests and dispose calls for scripted model decisions", async () => {
@@ -103,5 +114,33 @@ describe("bounded recovery planner", () => {
     const deadline = { step: vi.fn().mockImplementation(({ signal }) => new Promise((resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }))), dispose: vi.fn() };
     await expect(createRecoveryFlow({ model: deadline, limits: { runDeadlineMs: 1, providerAttemptMs: 50 } }).run(request)).resolves.toMatchObject({ status: 503, body: { stopReason: "deadline" } });
     expect(deadline.step).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [{ ...final, goal: "advance" }],
+    [{ ...final, actions: ["wait", "avoid"] }],
+    [{ ...final, evidence: [{ id: "threat", fact: "Recent threat: rolling hazard." }, { id: "threat", fact: "Recent threat: rolling hazard." }] }],
+    [{ ...final, confidence: "certain" }],
+    [{ ...final, completed: false }],
+  ])("rejects a structurally or semantically invalid final result", async (invalidFinal) => {
+    const model = { step: vi.fn()
+      .mockResolvedValueOnce({ kind: "tool_request", id: "one", name: "evaluate_recovery_plan", args: { actions: ["wait", "climb"] } })
+      .mockResolvedValueOnce({ kind: "final", result: invalidFinal }), dispose: vi.fn() };
+    await expect(createRecoveryFlow({ model }).run(request)).resolves.toMatchObject({ status: 422, body: { stopReason: "invalid_final_result" } });
+  });
+
+  it("bounds provider timeout and a third tool proposal", async () => {
+    const timeoutModel = { step: vi.fn(() => new Promise(() => {})), dispose: vi.fn() };
+    await expect(createRecoveryFlow({ model: timeoutModel, limits: { providerAttemptMs: 1, runDeadlineMs: 50 } }).run(request)).resolves.toMatchObject({ status: 503, body: { stopReason: "provider_failed" } });
+    expect(timeoutModel.step).toHaveBeenCalledOnce();
+
+    const events = [];
+    const thirdTool = { step: vi.fn()
+      .mockResolvedValueOnce({ kind: "tool_request", id: "one", name: "evaluate_recovery_plan", args: { actions: ["jump", "climb"] } })
+      .mockResolvedValueOnce({ kind: "tool_request", id: "two", name: "evaluate_recovery_plan", args: { actions: ["jump", "move_left"] } })
+      .mockResolvedValueOnce({ kind: "tool_request", id: "three", name: "evaluate_recovery_plan", args: { actions: ["wait", "climb"] } }), dispose: vi.fn() };
+    await expect(createRecoveryFlow({ model: thirdTool, eventSink: (event) => events.push(event) }).run(request)).resolves.toMatchObject({ status: 422, body: { stopReason: "step_limit" } });
+    expect(thirdTool.step).toHaveBeenCalledTimes(3);
+    expect(events[0]).toMatchObject({ stepCount: 3, toolCallCount: 2, providerAttemptCount: 3 });
   });
 });

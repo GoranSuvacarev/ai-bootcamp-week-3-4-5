@@ -175,11 +175,15 @@ then rerun successfully.
 - Agent implementation runs: 2 (initial implementation and review corrections).
 - Fake-model calls during automated validation: 0 external provider calls; the
   test doubles exercised retries, cancellation, limits, and malformed output.
-- Limited live-provider runs: 1. Model: `gemini-3.5-flash-lite`; result:
-  `completed`; model calls: 2; retry count: 0; evaluator tool calls: 1.
+- Limited Recovery Planner live-provider runs recorded during implementation and
+  review: 3, all using `gemini-3.5-flash-lite`. The pre-correction review run
+  stopped safely at `step_limit`; the implementation-correction run completed
+  with 2 model calls, 0 retries, and 1 evaluator call; the final reviewer run
+  completed in about 2.15 seconds with one evaluated advisory plan.
 - No API key, raw prompt, raw provider response, thought signature, coordinate,
-  or hidden reasoning is recorded. The live run returned a validated advisory
-  plan with the actions `wait`, `climb`.
-- Validation after review corrections: 112 tests passed (59 frontend, 47 backend,
-  6 shared); typecheck and production build passed. The production dependency
+  or hidden reasoning is recorded. The two successful live runs returned
+  validated advisory plans with the actions `wait`, `climb` and `avoid`,
+  `climb`, respectively.
+- Validation after final review corrections: 121 tests passed (59 frontend, 55 backend,
+  7 shared); typecheck and production build passed. The production dependency
   audit result recorded by the reviewer was zero vulnerabilities.

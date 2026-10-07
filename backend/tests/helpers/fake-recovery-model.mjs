@@ -3,13 +3,15 @@ export function createFakeRecoveryModel(script = []) {
   const queue = [...script];
   const requests = [];
   const disposedRunIds = [];
+  const abortReasons = [];
   return {
     requests,
     disposedRunIds,
+    abortReasons,
     async step(request) {
       requests.push(request);
       const next = queue.shift();
-      if (next?.kind === "pending") return new Promise((resolve, reject) => request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true }));
+      if (next?.kind === "pending") return new Promise((resolve, reject) => request.signal.addEventListener("abort", () => { abortReasons.push(request.signal.reason); reject(request.signal.reason); }, { once: true }));
       if (next?.kind === "error") throw next.error;
       return next;
     },

@@ -37,7 +37,7 @@ The planner never mutates game state or dispatches a returned action.
 
 Validation on 2026-10-07:
 
-- `npm.cmd run test`: 112 passing tests (59 frontend, 47 backend, 6 shared).
+- `npm.cmd run test`: 121 passing tests (59 frontend, 55 backend, 7 shared).
 - `npm.cmd run typecheck`: passed.
 - `npm.cmd run build`: passed.
 - `npm.cmd audit --omit=dev --workspace @quattro-kong/backend`: reviewer-run
@@ -45,11 +45,14 @@ Validation on 2026-10-07:
 
 ## Limited live verification
 
-One authorised live run used `gemini-3.5-flash-lite` on 2026-10-07 after all
-fake checks were green. The `survive` request completed with HTTP 200,
-`stopReason: completed`, the advisory actions `wait`, `climb`, high confidence,
-and deterministic evidence. It used one evaluator action and no retry. No key,
-prompt, raw provider payload, signature, or hidden reasoning was retained.
+The final authorised review run used `gemini-3.5-flash-lite` on 2026-10-07 after
+all fake checks were green. The `survive` request completed with HTTP 200 in
+about 2.15 seconds, `stopReason: completed`, the advisory actions `avoid`,
+`climb`, high confidence, and all four deterministic evidence facts. An earlier
+post-implementation success returned `wait`, `climb`; the initial pre-correction
+review run stopped safely at `step_limit` and led to the prompt and adapter
+corrections. No key, prompt, raw provider payload, signature, or hidden reasoning
+was retained.
 
 ## Bounded policy
 
@@ -60,10 +63,17 @@ three logical steps, two tool executions, five provider attempts, two attempts
 per step, and a 35-second deadline. Recovery events retain at most 50 redacted
 records and contain no prompts, coordinates, provider payloads, or credentials.
 
-## Remaining manual check and contributions
+## Browser smoke and contributions
 
-The remaining delivery check is the full browser smoke sequence for both goals,
-win/loss, focus, and stale suppression. Sara implemented contracts, evaluator,
-registry, flow, adapter, endpoint, UI, tests, and evidence updates. Goran
-performed the pre-fix security/repository review. Baseline implementation commit:
-`24034c9`; the review corrections are intentionally uncommitted pending review.
+The final browser review confirmed that the AI controls are hidden outside play,
+both post-damage actions are disabled before damage, a real collision changes
+lives from 03 to 02, and both `survive` and `advance` render validated local fake
+plans with explicit status, ordered actions, evidence, and confidence. It also
+confirmed Hint independence, focusable controls, pause cancellation with stale
+result suppression, restart, return to menu, and no browser-console errors. No
+rendered plan moved the player or changed canonical game state.
+
+Sara implemented contracts, evaluator, registry, flow, adapter, endpoint, UI,
+tests, and evidence updates. Goran performed the security, repository, automated,
+live-provider, and browser handoff review. Baseline implementation commit:
+`24034c9`; Sara's review-correction commit: `5c0a099`.

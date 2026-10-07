@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHintServer } from "../src/hint.mjs";
+import { createRecoveryToolRegistry } from "../src/recovery/tool-registry.mjs";
 
 const request = { goal: "survive", context: { difficulty: "normal", lives: 2, lastDamage: { cause: "hazard", x: 160, y: 640, time: 4.5 } } };
 const final = { summary: "Wait, then climb.", goal: "survive", actions: ["wait", "climb"], evidence: [{ id: "threat", fact: "Recent threat: rolling hazard." }], confidence: "high", completed: true };
@@ -38,5 +39,23 @@ describe("Recovery Planner HTTP API", () => {
     }
     expect(recoveryModel.step).not.toHaveBeenCalled();
     expect(recoveryModel.dispose).not.toHaveBeenCalled();
+  });
+
+  it("returns stable 422 and 502 responses without provider or payload details", async () => {
+    const unknown = { step: vi.fn().mockResolvedValue({ kind: "tool_request", id: "one", name: "take_control", args: {} }), dispose: vi.fn() };
+    const first = await start({ recoveryModel: unknown, apiKey: "server-secret" });
+    const stopped = await fetch(`${first.base}/api/recovery-plan`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
+    expect(stopped.status).toBe(422);
+    const stoppedBody = await stopped.json();
+    expect(stoppedBody).toMatchObject({ status: "stopped", stopReason: "unknown_tool", message: "Recovery planning stopped safely." });
+    expect(JSON.stringify(stoppedBody)).not.toMatch(/server-secret|take_control|160/);
+
+    const toolFailure = { step: vi.fn().mockResolvedValue({ kind: "tool_request", id: "one", name: "evaluate_recovery_plan", args: { actions: ["wait", "climb"] } }), dispose: vi.fn() };
+    const second = await start({ recoveryModel: toolFailure, recoveryRegistry: createRecoveryToolRegistry({ evaluator: () => { throw new Error("private tool detail"); } }) });
+    const failed = await fetch(`${second.base}/api/recovery-plan`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
+    expect(failed.status).toBe(502);
+    const failedBody = await failed.json();
+    expect(failedBody).toMatchObject({ status: "failed", stopReason: "tool_failed", message: "Recovery planning returned an invalid result." });
+    expect(JSON.stringify(failedBody)).not.toContain("private tool detail");
   });
 });

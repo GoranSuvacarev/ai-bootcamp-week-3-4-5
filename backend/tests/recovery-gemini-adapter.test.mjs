@@ -22,7 +22,7 @@ describe("recovery Gemini adapter", () => {
 
   it("rejects mixed tool and text output, multiple calls, and malformed final JSON", async () => {
     for (const response of [
-      { functionCalls: [{ id: "one", name: "evaluate_recovery_plan", args: { actions: ["wait", "climb"] } }], text: "also answer" },
+      { functionCalls: [{ id: "one", name: "evaluate_recovery_plan", args: { actions: ["wait", "climb"] } }], candidates: [{ content: { role: "model", parts: [{ functionCall: { name: "evaluate_recovery_plan" } }, { text: "also answer" }] } }] },
       { functionCalls: [{ id: "one", name: "evaluate_recovery_plan", args: {} }, { id: "two", name: "evaluate_recovery_plan", args: {} }] },
       { text: "not-json" },
     ]) {
